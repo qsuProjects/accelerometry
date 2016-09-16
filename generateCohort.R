@@ -12,37 +12,49 @@ complete_cohort <- cohort_data
 
 id_var <- "fID"
 dim_vars <- c("season", "hour", "weekday", "Date")
+dim_vars <- c("weekday", "hour")
+sample_vars <- c("Axis1", "Axis2", "Axis3")
 
-indexAvailableData <- function(complete_cohort, id_var, dim_vars) {
+################################################
+# This function takes a data frame and creates
+# and index variable based on user-specification
+
+# dim_vars is an vector of characters indicating
+#   teh variables which define the sample units
+#   ex. dim_vars <- c("weekday", "hour") will
+#   sample hours within weekdays
+#   order matters; vars should be nested in 
+#   the variable to their left
+
+# sample_vars is a character vector specifying
+#   which variables to sample
+
+# n_samples is an integer specifying how many
+#   subjects to sample from complete cohort
+################################################
+
+sampleCohort <- function(complete_cohort, dim_vars, sample_vars, n_samples) {
+  library(plyr)
+  library(dplyr)
+  #create row ID variable
+  complete_cohort$row_id <- 1:nrow(complete_cohort)
   
-  # .(fID, season, hour, weekday, Date),
-  complete_index <- ddply(complete_cohort, c(id_var, dim_vars), function(.data_block) {
-    cat("Indexing wear hours for", .subject_hour$fID[1], "\n")
+  sampled_cohort <- ddply(cohort_data, dim_vars, function(.cohort_subset, .n_samples, .sample_vars) {
     
-    if(  ( max(.subject_hour$nonwear) == 0 ) & ( nrow(.subject_hour) == 60 ) ){ 
-      .tor <- data.frame(day_hour = paste0( .subject_hour$weekday[1], "_", 
-                                            str_pad(.subject_hour$hour[1], width = 2, side = "left", pad = "0"), "_",
-                                            str_pad(.subject_hour$doy[1], width = 3, side = "left", pad = "0") 
-      ),
-      fID_day_hour = paste0(.subject_hour$fID[1], "_", .subject_hour$weekday[1], "_", 
-                            str_pad(.subject_hour$hour[1], width = 2, side = "left", pad = "0"), "_",
-                            str_pad(.subject_hour$doy[1], width = 3, side = "left", pad = "0") 
-      ),
-      stringsAsFactors = FALSE)
-      
-      return(.tor) 
-    }
-  })
+    
+    .sampled_rows <- sample(x = 1:nrow(.cohort_subset), size = .n_samples, replace = TRUE)
+    
+    .sampled_cohort <- .cohort_subset[ .sampled_rows, .sample_vars ]
+    .sampled_cohort$id_var <- 1:.n_samples
+    
+    .sampled_cohort
+  }, n_samples, sample_vars)
   
-  
-  
-  
+  sampled_cohort <- arrange_( sampled_cohort, c("id_var", dim_vars) ) %>%
+    select_( .dots =  c("id_var", dim_vars, sample_vars) )
+            
+  return(sampled_cohort)
 }
-generateCohort <- function(complete_cohort, scale, size, block, n_blocks) {
-  
-  
-  
-  
   
   
   
